@@ -33,7 +33,7 @@ app.UseRouting();
 
 app.MapRazorPages();
 app.MapControllers();
-app.MapHub<GameHub>("/gamehub");
+app.MapHub<TelnetHub>("/telnethub");
 app.MapFallbackToFile("index.html");
 
 app.Run();

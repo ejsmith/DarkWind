@@ -1,7 +1,8 @@
 ﻿@page "/"
 @using System.Text.Json
+@using DarkWind.Client.Hubs
 @using XtermBlazor
-@inject HubConnection HubConnection
+@inject TelnetHub Hub
 
 <PageTitle>Index</PageTitle>
 
@@ -72,6 +73,7 @@ EventCallback Logs:
 
     private int _eventId = 0, _columns, _rows;
     private string _input = "Hello World";
+    private CancellationTokenSource cts = new CancellationTokenSource();
 
     private async Task OnFirstRender()
     {
@@ -80,7 +82,9 @@ EventCallback Logs:
         _columns = await _terminal.GetColumns();
         _rows = await _terminal.GetRows();
 
-        var channel = await HubConnection.StreamAsChannelAsync<string>("Connect");
+        await Hub.Start();
+
+        var channel = await Hub.Connect(CancellationToken.None);
         while (await channel.WaitToReadAsync())
         {
             while (channel.TryRead(out var data))
@@ -147,12 +151,12 @@ EventCallback Logs:
 
     private async Task Write(MouseEventArgs args)
     {
-        await _terminal.Write(_input);
+        await Hub.Send(_input);
     }
 
     private async Task WriteLine(MouseEventArgs args)
     {
-        await _terminal.WriteLine(_input);
+        await Hub.Send($"{_input}\r\n");
     }
 
     private async Task HasSelection(MouseEventArgs args)
@@ -213,3 +217,4 @@ EventCallback Logs:
         await _terminalEvent.WriteLine($"({++_eventId}) GetColumns(): {JsonSerializer.Serialize(cols)}");
     }
 }
+

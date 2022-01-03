@@ -15,7 +15,7 @@ namespace DarkWind.Server.Controllers
     };
 
         private readonly ILogger<WeatherForecastController> _logger;
-        private readonly IHubContext<GameHub, IGameHub> hubContext;
+        private readonly IHubContext<TelnetHub, ITelnetHub> hubContext;
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
