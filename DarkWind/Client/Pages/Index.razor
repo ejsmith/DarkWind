@@ -30,6 +30,7 @@
         await Hub.Start();
 
         var channel = await Hub.Connect(CancellationToken.None);
+        
         await _terminal.Focus();
 
         while (await channel.WaitToReadAsync())

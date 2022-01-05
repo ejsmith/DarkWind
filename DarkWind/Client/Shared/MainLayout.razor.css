@@ -2,6 +2,15 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    background-color: #000000;
+}
+
+.xterm-viewport {
+    width: 100%;
+}
+
+body{
+    background-color: #000000;
 }
 
 main {

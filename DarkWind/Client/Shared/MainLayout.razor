@@ -1,17 +1,24 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <nav class="navbar-brand navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#">DarkWind Web Client</a>
+                </div>
+            </nav>
         </div>
-
-        <article class="content px-4">
+    </div>
+    <div class="row">
+        <div class="col">
             @Body
-        </article>
-    </main>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <br/>
+            <input type="text" class="form-control w-100" />
+        </div>
+    </div>
 </div>
