@@ -43,6 +43,10 @@ public class TelnetHub : Hub<ITelnetHub> {
         public async Task Connect() {
             Exception? localException = null;
             try {
+                //var newclient = new TelnetClient();
+                //await newclient.ConnectAsync("darkwind.org", 3000);
+                //var result = await newclient.ReadAsync();
+
                 _client = new PrimS.Telnet.Client("darkwind.org", 3000, _cancellationToken);
                 if (!_client.IsConnected)
                     return;
@@ -63,7 +67,10 @@ public class TelnetHub : Hub<ITelnetHub> {
         }
 
         public async Task Send(string data) {
-            await _client!.Write(data);
+            if (_client == null)
+                return;
+
+            await _client.Write(data);
         }
 
         public void Dispose() {

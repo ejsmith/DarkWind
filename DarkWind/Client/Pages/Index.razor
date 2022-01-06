@@ -3,24 +3,30 @@
 @using DarkWind.Client.Hubs
 @using XtermBlazor
 @inject TelnetHub Hub
+@inject IJSRuntime _js
 
-<PageTitle>Index</PageTitle>
+<PageTitle>DarkWind Web Client</PageTitle>
 
 <Xterm
     @ref="_terminal"
     Options="_options"
     OnFirstRender="@OnFirstRender"
-    OnKey="@OnKey"
 />
+<form @onsubmit="SendCommand" class="m-1">
+    <div class="input-group mb-3 w-100">
+        <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2">
+        <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Send</button>
+    </div>
+</form>
 
 @code {
-    private Xterm _terminal;
+    private Xterm? _terminal;
+    private string _input = String.Empty;
 
     private TerminalOptions _options = new TerminalOptions
     {
-        CursorBlink = true,
-        CursorStyle = CursorStyle.Block,
         Rows = 30,
+        CursorStyle = CursorStyle.Bar
     };
 
     private CancellationTokenSource cts = new CancellationTokenSource();
@@ -30,24 +36,26 @@
         await Hub.Start();
 
         var channel = await Hub.Connect(CancellationToken.None);
-        
-        await _terminal.Focus();
+
+        await _js.InvokeVoidAsync("selectText", "input");
 
         while (await channel.WaitToReadAsync())
         {
             while (channel.TryRead(out var data))
             {
-                await _terminal.Write(data);
+                await _terminal!.Write(data);
             }
         }
     }
 
-    private async Task OnKey(KeyboardEventArgs args)
+    private async Task SendCommand()
     {
-        var printable = (!args.AltKey && !args.CtrlKey && !args.MetaKey);
-        await Hub.Send(args.Key);
-        if (printable)
-            await _terminal.Write(args.Key);
+        if (String.IsNullOrEmpty(_input))
+            return;
+
+        await Hub.Send(_input + '\r');
+        await _terminal!.Write(_input + "\r\n");
+        await _js.InvokeVoidAsync("selectText", "input");
     }
 }
 
