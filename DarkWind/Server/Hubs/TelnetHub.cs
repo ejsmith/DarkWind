@@ -53,7 +53,7 @@ public class TelnetHub : Hub<ITelnetHub> {
 
                 do {
                     var data = await _client.ReadAsync();
-                    if (data != null)
+                    if (!String.IsNullOrEmpty(data))
                         await Channel.Writer.WriteAsync(data);
                 }
                 while (true);
