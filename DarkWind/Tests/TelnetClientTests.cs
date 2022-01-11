@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using DarkWind.Server.Hubs;
+using DarkWind.Shared;
 using Foundatio.Xunit;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -18,27 +19,23 @@ namespace DarkWind.Tests {
                 Option = TelnetClient.KnownTelnetOptions.GMCP,
                 IsWanted = true,
                 Initialize = async (client) => {
-                    await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Hello {\"Client\":\"Darkwind\",\"Version\":\"1.0.0\"}");
+                    await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Hello {\"Client\":\"DarkWind\",\"Version\":\"1.0.0\"}");
                     await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\" ]");
                     await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Ping");
-                },
-                MessageHandler = (client, message) => {
-                    _logger.LogInformation("GMCP: " + message);
-                    return Task.CompletedTask;
                 }
             });
 
             await client.ConnectAsync("darkwind.org", 3000);
 
             var cts = new CancellationTokenSource();
-            string message;
+            TelnetMessage message;
             do {
                 cts.CancelAfter(TimeSpan.FromSeconds(5));
                 message = await client.Messages.ReadAsync();
                 if (!cts.TryReset())
                     cts = new CancellationTokenSource();
-                _logger.LogInformation(message);
-            } while (message.Contains("what name") == false);
+                _logger.LogInformation(message.Message);
+            } while (message.Message!.Contains("what name") == false);
 
             await client.WriteLineAsync("SuperZ");
 
@@ -47,15 +44,15 @@ namespace DarkWind.Tests {
                 message = await client.Messages.ReadAsync();
                 if (!cts.TryReset())
                     cts = new CancellationTokenSource();
-                _logger.LogInformation(message);
-            } while (message.Contains("password") == false);
+                _logger.LogInformation(message.Message);
+            } while (message.Message!.Contains("password") == false);
 
             await client.WriteLineAsync("banana");
 
             cts.CancelAfter(TimeSpan.FromMinutes(1));
             do {
                 message = await client.Messages.ReadAsync(cts.Token);
-                _logger.LogInformation(message);
+                _logger.LogInformation(message.Message);
             } while (true);
         }
     }

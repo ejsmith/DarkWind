@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using System.Text.Json
 @using DarkWind.Client.Hubs
+@using DarkWind.Shared
 @using XtermBlazor
 @inject TelnetHub Hub
 @inject IJSRuntime _js
@@ -12,6 +13,7 @@
     Options="_options"
     OnFirstRender="@OnFirstRender"
 />
+
 <form @onsubmit="SendCommand" class="m-1">
     <div class="input-group mb-3 w-100">
         <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2">
@@ -19,9 +21,13 @@
     </div>
 </form>
 
+<Xterm @ref="_gmcp" Options="_gmcpOptions" />
+
 @code {
     private Xterm? _terminal;
+    private Xterm? _gmcp;
     private string _input = String.Empty;
+    private CancellationTokenSource cts = new CancellationTokenSource();
 
     private TerminalOptions _options = new TerminalOptions
     {
@@ -29,13 +35,17 @@
         CursorStyle = CursorStyle.Bar
     };
 
-    private CancellationTokenSource cts = new CancellationTokenSource();
+    private TerminalOptions _gmcpOptions = new TerminalOptions
+    {
+        Rows = 10,
+        CursorStyle = CursorStyle.Bar
+    };
 
     private async Task OnFirstRender()
     {
         await Hub.Start();
 
-        var channel = await Hub.Connect(CancellationToken.None);
+        var channel = await Hub.Connect(cts.Token);
 
         await _js.InvokeVoidAsync("selectText", "input");
 
@@ -43,7 +53,23 @@
         {
             while (channel.TryRead(out var data))
             {
-                await _terminal!.Write(data);
+                if (data.Option == TelnetMessage.KnownOptions.Echo)
+                    await _terminal!.Write(data.Message);
+                else if (data.Option == TelnetMessage.KnownOptions.GMCP) {
+                    if (String.IsNullOrEmpty(data.Message))
+                        continue;
+
+                    await _gmcp!.WriteLine(data.Message);
+                    var parts = data.Message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var name = parts.Length >= 1 ? parts[0] : data.Message;
+                    var payload = parts.Length >= 2 && !String.IsNullOrWhiteSpace(parts[1]) ? parts[1] : String.Empty;
+                    try
+                    {
+                        var gmcpData = JsonDocument.Parse(payload);
+                    } catch (Exception ex) {
+                        await _gmcp!.WriteLine("ERR: " + ex.Message);
+                    }
+                }
             }
         }
     }
@@ -56,6 +82,14 @@
         await Hub.Send(_input + '\r');
         await _terminal!.Write(_input + "\r\n");
         await _js.InvokeVoidAsync("selectText", "input");
+    }
+
+    private async Task SendGmcpCommand(string command)
+    {
+        if (String.IsNullOrEmpty(command))
+            return;
+
+        await Hub.SendGmcp(command);
     }
 }
 

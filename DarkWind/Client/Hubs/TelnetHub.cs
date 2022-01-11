@@ -25,13 +25,17 @@ public class TelnetHub : IAsyncDisposable, ITelnetHub {
         }
     }
 
-    public async Task<ChannelReader<string>> Connect(CancellationToken cancellationToken) {
-        var channel = await _connection.StreamAsChannelAsync<string>("Connect", cancellationToken);
+    public async Task<ChannelReader<TelnetMessage>> Connect(CancellationToken cancellationToken) {
+        var channel = await _connection.StreamAsChannelAsync<TelnetMessage>("Connect", cancellationToken);
         return channel;
     }
 
     public Task Send(string data) {
         return _connection.InvokeAsync("Send", data);
+    }
+
+    public Task SendGmcp(string data) {
+        return _connection.InvokeAsync("SendGmcp", data);
     }
 
     public async ValueTask DisposeAsync() {

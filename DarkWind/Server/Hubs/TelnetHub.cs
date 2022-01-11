@@ -8,7 +8,7 @@ namespace DarkWind.Server.Hubs;
 public class TelnetHub : Hub<ITelnetHub> {
     private static readonly ConcurrentDictionary<string, TelnetState> _connections = new();
 
-    public ChannelReader<string> Connect(CancellationToken cancellationToken) {
+    public ChannelReader<TelnetMessage> Connect(CancellationToken cancellationToken) {
         var telnetState = new TelnetState(cancellationToken);
         _connections.TryAdd(Context.ConnectionId, telnetState);
 
@@ -24,37 +24,47 @@ public class TelnetHub : Hub<ITelnetHub> {
         return telnetState.Send(data);
     }
 
+    public Task SendGmcp(string data) {
+        if (!_connections.TryGetValue(Context.ConnectionId, out var telnetState))
+            return Task.CompletedTask;
+
+        return telnetState.SendGmcp(data);
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception) {
         _connections.TryRemove(Context.ConnectionId, out _);
         return base.OnDisconnectedAsync(exception);
     }
 
-    class TelnetState : IDisposable {
+    class TelnetState : IAsyncDisposable {
         private readonly CancellationToken _cancellationToken;
-        private PrimS.Telnet.Client? _client;
+        private TelnetClient? _client;
 
         public TelnetState(CancellationToken cancellationToken) {
             _cancellationToken = cancellationToken;
-            Channel = System.Threading.Channels.Channel.CreateUnbounded<string>();
+            Channel = System.Threading.Channels.Channel.CreateUnbounded<TelnetMessage>();
         }
 
-        public Channel<string> Channel { get; }
+        public Channel<TelnetMessage> Channel { get; }
 
         public async Task Connect() {
             Exception? localException = null;
             try {
-                //var newclient = new TelnetClient();
-                //await newclient.ConnectAsync("darkwind.org", 3000);
-                //var result = await newclient.ReadAsync();
-
-                _client = new PrimS.Telnet.Client("darkwind.org", 3000, _cancellationToken);
-                if (!_client.IsConnected)
-                    return;
+                _client = new TelnetClient();
+                _client.AddOption(new TelnetOption {
+                    Option = TelnetClient.KnownTelnetOptions.GMCP,
+                    IsWanted = true,
+                    Initialize = async (client) => {
+                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Hello {\"Client\":\"DarkWind\",\"Version\":\"1.0.0\"}");
+                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\" ]");
+                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Ping");
+                    },
+                });
+                await _client.ConnectAsync("darkwind.org", 3000);
 
                 do {
-                    var data = await _client.ReadAsync();
-                    if (!String.IsNullOrEmpty(data))
-                        await Channel.Writer.WriteAsync(data);
+                    var data = await _client.Messages.ReadAsync();
+                    await Channel.Writer.WriteAsync(data);
                 }
                 while (true);
             }
@@ -70,11 +80,21 @@ public class TelnetHub : Hub<ITelnetHub> {
             if (_client == null)
                 return;
 
-            await _client.Write(data);
+            await _client.WriteAsync(data);
         }
 
-        public void Dispose() {
-            _client?.Dispose();
+        public async Task SendGmcp(string data) {
+            if (_client == null)
+                return;
+
+            await _client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, data);
+        }
+
+        public ValueTask DisposeAsync() {
+            if (_client != null)
+                return _client.DisposeAsync();
+
+            return ValueTask.CompletedTask;
         }
     }
 }

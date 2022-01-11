@@ -3,19 +3,20 @@ using System.Net.Sockets;
 using System.Threading.Channels;
 using System.IO.Pipelines;
 using System.Diagnostics;
+using DarkWind.Shared;
 
 namespace DarkWind.Server.Hubs;
 
-public class TelnetClient {
+public class TelnetClient : IAsyncDisposable {
     private PipeReader? _reader;
     private PipeWriter? _writer;
-    private Channel<string>? _channel;
+    private Channel<TelnetMessage>? _channel;
     private Task? _readerTask;
     private CancellationTokenSource? _cancellationTokenSource;
-    private readonly List<ITelnetOption> _options = new List<ITelnetOption>();
+    private readonly List<ITelnetOption> _options = new();
 
     public bool IsConnected { get; private set; }
-    public ChannelReader<string> Messages => _channel!.Reader;
+    public ChannelReader<TelnetMessage> Messages => _channel!.Reader;
     public IReadOnlyCollection<ITelnetOption> Options => _options;
 
     public Task ConnectAsync(string host, int port) {
@@ -35,7 +36,7 @@ public class TelnetClient {
         _reader = PipeReader.Create(stream);
         _writer = PipeWriter.Create(stream);
 
-        _channel = Channel.CreateBounded<string>(new BoundedChannelOptions(25) {
+        _channel = Channel.CreateBounded<TelnetMessage>(new BoundedChannelOptions(25) {
             FullMode = BoundedChannelFullMode.Wait
         });
         _readerTask = StartReading(_cancellationTokenSource.Token);
@@ -170,8 +171,7 @@ public class TelnetClient {
                                     subNegotiationOption = inputOption;
                                     break;
                                 case TelnetCommand.SE:
-                                    if (option?.MessageHandler != null)
-                                        await option.MessageHandler(this, sb.ToString());
+                                    await _channel!.Writer.WriteAsync(new TelnetMessage { Option = inputOption, Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                     sb.Clear();
                                     subNegotiationOption = 0;
                                     break;
@@ -179,14 +179,14 @@ public class TelnetClient {
                                     break;
                             }
 
-                            if (sb.Length > 0) {
-                                await _channel!.Writer.WriteAsync(sb.ToString(), cancellationToken).ConfigureAwait(false);
+                            if (sb.Length > 0 && subNegotiationOption == 0) {
+                                await _channel!.Writer.WriteAsync(new TelnetMessage { Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                 sb.Clear();
                             }
                         } else {
                             if (AppendValue(current, sb) || i == segment.Span.Length - 1) {
                                 if (subNegotiationOption == 0) {
-                                    await _channel!.Writer.WriteAsync(sb.ToString(), cancellationToken).ConfigureAwait(false);
+                                    await _channel!.Writer.WriteAsync(new TelnetMessage { Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                     sb.Clear();
                                 }
                             }
@@ -214,7 +214,7 @@ public class TelnetClient {
             // - Server detected a closed connection in another part of the communication stack
             // - QUIT command
         }
-        catch (Exception ex) {
+        catch (Exception) {
             Abort();
         }
         finally {
@@ -225,15 +225,15 @@ public class TelnetClient {
     public async ValueTask SendCommandAsync(byte command, byte option) {
         if (!IsConnected) return;
 
-        await _writer!.WriteAsync(new byte[] { TelnetCommand.IAC, command, option });
+        await _writer!.WriteAsync(new byte[] { TelnetCommand.IAC, command, option }, _cancellationTokenSource!.Token);
     }
 
     public async ValueTask SendSubCommandAsync(byte option, string data) {
         if (!IsConnected) return;
 
-        await _writer!.WriteAsync(new[] { TelnetCommand.IAC, TelnetCommand.SB, option });
-        await _writer!.WriteAsync(Encoding.ASCII.GetBytes(data));
-        await _writer!.WriteAsync(new[] { TelnetCommand.IAC, TelnetCommand.SE });
+        await _writer!.WriteAsync(new[] { TelnetCommand.IAC, TelnetCommand.SB, option }, _cancellationTokenSource!.Token);
+        await _writer!.WriteAsync(Encoding.ASCII.GetBytes(data), _cancellationTokenSource!.Token);
+        await _writer!.WriteAsync(new[] { TelnetCommand.IAC, TelnetCommand.SE }, _cancellationTokenSource!.Token);
     }
 
     public ValueTask WriteLineAsync(string data) {
@@ -244,16 +244,18 @@ public class TelnetClient {
         if (!IsConnected) return;
 
         var buffer = Encoding.ASCII.GetBytes(data.Replace("\0xFF", "\0xFF\0xFF"));
-        await _writer!.WriteAsync(buffer);
+        await _writer!.WriteAsync(buffer, _cancellationTokenSource!.Token);
     }
 
     public async ValueTask WriteAsync(ReadOnlyMemory<byte> data) {
         if (!IsConnected) return;
 
-        await _writer!.WriteAsync(data);
+        await _writer!.WriteAsync(data, _cancellationTokenSource!.Token);
     }
 
-    private void Abort() { }
+    private void Abort() {
+        _cancellationTokenSource?.Cancel();
+    }
 
     private bool AppendValue(byte value, StringBuilder sb) {
         switch (value) {
@@ -304,7 +306,13 @@ public class TelnetClient {
 
         return false;
     }
-    
+
+    public async ValueTask DisposeAsync() {
+        _cancellationTokenSource?.Cancel();
+        if (_readerTask != null)
+            await _readerTask;
+    }
+
     public class TelnetCommand {
         /// <summary>
         /// End of subnegotiation parameters
@@ -451,7 +459,6 @@ public interface ITelnetOption {
     bool? IsWanted { get; internal set; }
     bool? NegotiatedValue { get; internal set; }
     Func<TelnetClient, Task>? Initialize { get; }
-    Func<TelnetClient, string, Task>? MessageHandler { get; }
 }
 
 public class TelnetOption : ITelnetOption {
@@ -460,7 +467,4 @@ public class TelnetOption : ITelnetOption {
     public bool? IsWanted { get; set; }
     public bool? NegotiatedValue { get; set; }
     public Func<TelnetClient, Task>? Initialize { get; set; }
-    public Func<TelnetClient, string, Task>? MessageHandler { get; set; }
 }
-
-//public class GmcpTelnetOption : ITelnetOption {}
