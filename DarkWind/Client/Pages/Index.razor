@@ -93,8 +93,8 @@
                     await _gmcp!.WriteLine(message.Data);
 
                     var firstSpace  = message.Data.IndexOf(' ');
-                    var command        = firstSpace > 0 ? message.Data.Substring(0, firstSpace) : message.Data;
-                    var gmcpData     = firstSpace > 0 && message.Data.Length > firstSpace ? message.Data.Substring(firstSpace) : String.Empty;
+                    var command     = firstSpace > 0 ? message.Data.Substring(0, firstSpace) : message.Data;
+                    var gmcpData    = firstSpace > 0 && message.Data.Length > firstSpace ? message.Data.Substring(firstSpace) : String.Empty;
 
                     try
                     {
