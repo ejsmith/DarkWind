@@ -45,6 +45,8 @@
                 health      = vitals.Health;
                 maxHealth   = vitals.MaxHealth;
 
+                StateHasChanged();
+
                 break;
         }
     }
@@ -99,7 +101,6 @@
                     try
                     {
                         await HandleGmcpMessage(command, gmcpData);
-                        StateHasChanged();
                     } 
                     catch (Exception ex) 
                     {
