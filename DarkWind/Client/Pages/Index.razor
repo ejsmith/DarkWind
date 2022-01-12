@@ -2,6 +2,7 @@
 @using System.Text.Json
 @using DarkWind.Client.Hubs
 @using DarkWind.Shared
+@using System.Text.Json.Nodes
 @using XtermBlazor
 @inject TelnetHub Hub
 @inject IJSRuntime _js
@@ -13,6 +14,8 @@
     Options="_options"
     OnFirstRender="@OnFirstRender"
 />
+
+<div>HP: @health / @maxHealth</div>
 
 <form @onsubmit="SendCommand" class="m-1">
     <div class="input-group mb-3 w-100">
@@ -27,6 +30,8 @@
     private Xterm? _terminal;
     private Xterm? _gmcp;
     private string _input = String.Empty;
+    int health = 0;
+    int maxHealth = 0;
     private CancellationTokenSource cts = new CancellationTokenSource();
 
     private TerminalOptions _options = new TerminalOptions
@@ -60,12 +65,18 @@
                         continue;
 
                     await _gmcp!.WriteLine(data.Message);
-                    var parts = data.Message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    var name = parts.Length >= 1 ? parts[0] : data.Message;
-                    var payload = parts.Length >= 2 && !String.IsNullOrWhiteSpace(parts[1]) ? parts[1] : String.Empty;
+                    var firstSpace = data.Message.IndexOf(' ');
+                    var name = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
+                    var payload = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
                     try
                     {
                         var gmcpData = JsonDocument.Parse(payload);
+                        if (name == "Char.Vitals") {
+                            var vitals = JsonNode.Parse(payload);
+                            health = vitals!["hp"]?.GetValue<int>() ?? 0;
+                            maxHealth = vitals!["maxhp"]?.GetValue<int>() ?? 0;
+                            StateHasChanged();
+                        }
                     } catch (Exception ex) {
                         await _gmcp!.WriteLine("ERR: " + ex.Message);
                     }

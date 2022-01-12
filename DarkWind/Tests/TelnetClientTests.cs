@@ -14,7 +14,7 @@ namespace DarkWind.Tests {
 
         [Fact]
         public async Task CanConnect() {
-            var client = new TelnetClient();
+            var client = new TelnetClient(Log);
             client.AddOption(new TelnetOption {
                 Option = TelnetClient.KnownTelnetOptions.GMCP,
                 IsWanted = true,

@@ -14,6 +14,13 @@ public class TelnetClient : IAsyncDisposable {
     private Task? _readerTask;
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly List<ITelnetOption> _options = new();
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<TelnetClient> _logger;
+
+    public TelnetClient(ILoggerFactory loggerFactory) {
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<TelnetClient>();
+    }
 
     public bool IsConnected { get; private set; }
     public ChannelReader<TelnetMessage> Messages => _channel!.Reader;
@@ -68,7 +75,7 @@ public class TelnetClient : IAsyncDisposable {
 
                 foreach (var segment in buffer) {
                     // TODO: Remove this
-                    var debugText = Encoding.ASCII.GetString(segment.Span);
+                    //_logger.LogInformation(Encoding.ASCII.GetString(segment.Span));
 
                     byte current;
                     for (int i = 0; i < segment.Span.Length; i++) {
@@ -82,10 +89,18 @@ public class TelnetClient : IAsyncDisposable {
                                 break;
                             }
 
+
                             i++;
-                            var inputVerb = segment.Span[i];
+                            var inputCommand = segment.Span[i];
+
+                            // literal IAC = 255 escaped, so append char 255 to string
+                            if (inputCommand == TelnetCommand.IAC) {
+                                sb.Append((char)inputCommand);
+                                continue;
+                            }
+
                             byte inputOption = 0;
-                            if (inputVerb != TelnetCommand.SE) {
+                            if (inputCommand != TelnetCommand.SE) {
                                 i++;
                                 inputOption = segment.Span[i];
                             } else {
@@ -103,11 +118,9 @@ public class TelnetClient : IAsyncDisposable {
                                 _options.Add(option);
                             }
 
-                            switch (inputVerb) {
-                                case TelnetCommand.IAC:
-                                    // literal IAC = 255 escaped, so append char 255 to string
-                                    sb.Append((char)inputVerb);
-                                    continue;
+                            _logger.LogInformation("IAC: {InputVerb} {InputOption}", TelnetCommand.GetCommandName(inputCommand), option.OptionName);
+
+                            switch (inputCommand) {
                                 case TelnetCommand.DO:
                                     // check to see if client has preference
                                     if (option.IsWanted.HasValue && option.IsWanted.Value) {
@@ -169,8 +182,10 @@ public class TelnetClient : IAsyncDisposable {
                                     break;
                                 case TelnetCommand.SB:
                                     subNegotiationOption = inputOption;
+                                    _logger.LogInformation("Starting suboption for {OptionName}", option.OptionName);
                                     break;
                                 case TelnetCommand.SE:
+                                    _logger.LogInformation("Ending suboption for {OptionName}: {Message}", option.OptionName, sb.ToString());
                                     await _channel!.Writer.WriteAsync(new TelnetMessage { Option = inputOption, Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                     sb.Clear();
                                     subNegotiationOption = 0;
@@ -180,12 +195,18 @@ public class TelnetClient : IAsyncDisposable {
                             }
 
                             if (sb.Length > 0 && subNegotiationOption == 0) {
+                                _logger.LogInformation("Sending message due to start of IAC: {Message}", sb.ToString());
                                 await _channel!.Writer.WriteAsync(new TelnetMessage { Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                 sb.Clear();
                             }
                         } else {
                             if (AppendValue(current, sb) || i == segment.Span.Length - 1) {
                                 if (subNegotiationOption == 0) {
+                                    if (i == segment.Span.Length - 1)
+                                        _logger.LogInformation("Sending message due to end of span: {Message}", sb.ToString());
+                                    else
+                                        _logger.LogInformation("Sending message due to new line char: {Message}", sb.ToString());
+
                                     await _channel!.Writer.WriteAsync(new TelnetMessage { Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                     sb.Clear();
                                 }
@@ -393,6 +414,28 @@ public class TelnetClient : IAsyncDisposable {
         /// IAC (Interpret as Command)
         /// </summary>
         public const byte IAC = 255;
+
+        public static string GetCommandName(byte option) {
+            return option switch {
+                SE => "SE",
+                NOP => "NOP",
+                DM => "DM",
+                BRK => "BRK",
+                IP => "IP",
+                AO => "AO",
+                AYT => "AYT",
+                EC => "EC",
+                EL => "EL",
+                GA => "GA",
+                SB => "SB",
+                WILL => "WILL",
+                WONT => "WONT",
+                DO => "DO",
+                DONT => "DONT",
+                IAC => "IAC",
+                _ => option.ToString(),
+            };
+        }
     }
 
     public class KnownTelnetOptions {
@@ -447,7 +490,7 @@ public class TelnetClient : IAsyncDisposable {
                 TelnetEnvironmentOption => "TelnetEnvironmentOption",
                 GMCP => "GMCP",
                 MSSP => "MSSP",
-                _ => String.Empty,
+                _ => option.ToString(),
             };
         }
     }
