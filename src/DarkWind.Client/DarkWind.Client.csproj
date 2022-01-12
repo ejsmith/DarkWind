@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shared\DarkWind.Shared.csproj" />
+    <ProjectReference Include="..\DarkWind.Shared\DarkWind.Shared.csproj" />
   </ItemGroup>
 
 </Project>

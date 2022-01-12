@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Server\DarkWind.Server.csproj" />
+    <ProjectReference Include="..\..\src\DarkWind.Server\DarkWind.Server.csproj" />
   </ItemGroup>
 
 </Project>

@@ -34,13 +34,13 @@
     int maxHealth = 0;
     private CancellationTokenSource cts = new CancellationTokenSource();
 
-    private async Task HandleGmcpMessage(string command, string data) {
+    private Task HandleGmcpMessage(string command, string data) {
         switch (command)
         {
             case "Char.Vitals":
                 var vitals = JsonSerializer.Deserialize<CharVitals>(data);
                 if (vitals == null)
-                    return;
+                    return Task.CompletedTask;
 
                 health      = vitals.Health;
                 maxHealth   = vitals.MaxHealth;
@@ -49,6 +49,8 @@
 
                 break;
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task SendCommand(string command)
