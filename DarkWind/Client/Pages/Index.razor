@@ -19,7 +19,7 @@
 
 <form @onsubmit="SendCommand" class="m-1">
     <div class="input-group mb-3 w-100">
-        <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2">
+        <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2" autocomplete="off" style="box-shadow:none;">
         <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Send</button>
     </div>
 </form>
@@ -33,6 +33,7 @@
     int health = 0;
     int maxHealth = 0;
     private CancellationTokenSource cts = new CancellationTokenSource();
+
 
     private TerminalOptions _options = new TerminalOptions
     {
@@ -58,26 +59,34 @@
         {
             while (channel.TryRead(out var data))
             {
-                if (data.Option == TelnetMessage.KnownOptions.Echo)
-                    await _terminal!.Write(data.Message);
-                else if (data.Option == TelnetMessage.KnownOptions.GMCP) {
-                    if (String.IsNullOrEmpty(data.Message))
-                        continue;
+                if (data.Option == TelnetMessage.KnownOptions.Echo) 
+                {
+                    await _terminal!.Write(data.Message);    
+                }
+                else if (data.Option == TelnetMessage.KnownOptions.GMCP) 
+                {
+                    if (String.IsNullOrEmpty(data.Message)) continue;
 
                     await _gmcp!.WriteLine(data.Message);
-                    var firstSpace = data.Message.IndexOf(' ');
-                    var name = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
-                    var payload = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
+
+                    var firstSpace  = data.Message.IndexOf(' ');
+                    var name        = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
+                    var payload     = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
+
                     try
                     {
                         var gmcpData = JsonDocument.Parse(payload);
-                        if (name == "Char.Vitals") {
-                            var vitals = JsonNode.Parse(payload);
-                            health = vitals!["hp"]?.GetValue<int>() ?? 0;
-                            maxHealth = vitals!["maxhp"]?.GetValue<int>() ?? 0;
+                        if (name == "Char.Vitals") 
+                        {
+                            var vitals  = JsonNode.Parse(payload);
+                            health      = vitals!["hp"]?.GetValue<int>() ?? 0;
+                            maxHealth   = vitals!["maxhp"]?.GetValue<int>() ?? 0;
+
                             StateHasChanged();
                         }
-                    } catch (Exception ex) {
+                    } 
+                    catch (Exception ex) 
+                    {
                         await _gmcp!.WriteLine("ERR: " + ex.Message);
                     }
                 }
@@ -87,8 +96,7 @@
 
     private async Task SendCommand()
     {
-        if (String.IsNullOrEmpty(_input))
-            return;
+        if (String.IsNullOrEmpty(_input)) return;
 
         await Hub.Send(_input + '\r');
         await _terminal!.Write(_input + "\r\n");
@@ -97,8 +105,7 @@
 
     private async Task SendGmcpCommand(string command)
     {
-        if (String.IsNullOrEmpty(command))
-            return;
+        if (String.IsNullOrEmpty(command)) return;
 
         await Hub.SendGmcp(command);
     }
