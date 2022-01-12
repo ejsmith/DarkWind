@@ -34,63 +34,18 @@
     int maxHealth = 0;
     private CancellationTokenSource cts = new CancellationTokenSource();
 
-
-    private TerminalOptions _options = new TerminalOptions
-    {
-        Rows = 30,
-        CursorStyle = CursorStyle.Bar
-    };
-
-    private TerminalOptions _gmcpOptions = new TerminalOptions
-    {
-        Rows = 10,
-        CursorStyle = CursorStyle.Bar
-    };
-
-    private async Task OnFirstRender()
-    {
-        await Hub.Start();
-
-        var channel = await Hub.Connect(cts.Token);
-
-        await _js.InvokeVoidAsync("selectText", "input");
-
-        while (await channel.WaitToReadAsync())
+    private async Task HandleGmcpMessage(string command, string data) {
+        switch (command)
         {
-            while (channel.TryRead(out var data))
-            {
-                if (data.Option == TelnetMessage.KnownOptions.Echo) 
-                {
-                    await _terminal!.Write(data.Message);    
-                }
-                else if (data.Option == TelnetMessage.KnownOptions.GMCP) 
-                {
-                    if (String.IsNullOrEmpty(data.Message)) continue;
+            case "Char.Vitals":
+                var vitals = JsonSerializer.Deserialize<CharVitals>(data);
+                if (vitals == null)
+                    return;
 
-                    await _gmcp!.WriteLine(data.Message);
+                health      = vitals.Health;
+                maxHealth   = vitals.MaxHealth;
 
-                    var firstSpace  = data.Message.IndexOf(' ');
-                    var name        = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
-                    var payload     = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
-
-                    try
-                    {
-                        var gmcpData = JsonDocument.Parse(payload);
-                        if (name == "Char.Vitals") 
-                        {
-                            var vitals  = JsonNode.Parse(payload);
-                            health      = vitals!["hp"]?.GetValue<int>() ?? 0;
-                            maxHealth   = vitals!["maxhp"]?.GetValue<int>() ?? 0;
-
-                            StateHasChanged();
-                        }
-                    } 
-                    catch (Exception ex) 
-                    {
-                        await _gmcp!.WriteLine("ERR: " + ex.Message);
-                    }
-                }
-            }
+                break;
         }
     }
 
@@ -109,5 +64,57 @@
 
         await Hub.SendGmcp(command);
     }
+
+    private async Task OnFirstRender()
+    {
+        await _js.InvokeVoidAsync("selectText", "input");
+
+        await Hub.Start();
+
+        var channel = await Hub.Connect(cts.Token);
+
+        while (await channel.WaitToReadAsync())
+        {
+            while (channel.TryRead(out var data))
+            {
+                if (data.Option == TelnetMessage.KnownOptions.Echo) 
+                {
+                    await _terminal!.Write(data.Message);    
+                }
+                else if (data.Option == TelnetMessage.KnownOptions.GMCP) 
+                {
+                    if (String.IsNullOrEmpty(data.Message)) continue;
+
+                    await _gmcp!.WriteLine(data.Message);
+
+                    var firstSpace  = data.Message.IndexOf(' ');
+                    var command        = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
+                    var gmcpData     = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
+
+                    try
+                    {
+                        await HandleGmcpMessage(command, gmcpData);
+                        StateHasChanged();
+                    } 
+                    catch (Exception ex) 
+                    {
+                        await _gmcp!.WriteLine("ERR: " + ex.Message);
+                    }
+                }
+            }
+        }
+    }
+
+    private TerminalOptions _options = new TerminalOptions
+    {
+        Rows = 30,
+        CursorStyle = CursorStyle.Bar
+    };
+
+    private TerminalOptions _gmcpOptions = new TerminalOptions
+    {
+        Rows = 10,
+        CursorStyle = CursorStyle.Bar
+    };
 }
 
