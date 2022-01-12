@@ -74,9 +74,6 @@ public class TelnetClient : IAsyncDisposable {
                 Debug.Assert(buffer.IsSingleSegment);
 
                 foreach (var segment in buffer) {
-                    // TODO: Remove this
-                    //_logger.LogInformation(Encoding.ASCII.GetString(segment.Span));
-
                     byte current;
                     for (int i = 0; i < segment.Span.Length; i++) {
                         current = segment.Span[i];
@@ -118,7 +115,7 @@ public class TelnetClient : IAsyncDisposable {
                                 _options.Add(option);
                             }
 
-                            _logger.LogInformation("IAC: {InputVerb} {InputOption}", TelnetCommand.GetCommandName(inputCommand), option.OptionName);
+                            _logger.LogDebug("IAC: {InputVerb} {InputOption}", TelnetCommand.GetCommandName(inputCommand), option.OptionName);
 
                             switch (inputCommand) {
                                 case TelnetCommand.DO:
@@ -182,11 +179,11 @@ public class TelnetClient : IAsyncDisposable {
                                     break;
                                 case TelnetCommand.SB:
                                     subNegotiationOption = inputOption;
-                                    _logger.LogInformation("Starting suboption for {OptionName}", option.OptionName);
+                                    _logger.LogDebug("Starting suboption for {OptionName}", option.OptionName);
                                     break;
                                 case TelnetCommand.SE:
-                                    _logger.LogInformation("Ending suboption for {OptionName}: {Message}", option.OptionName, sb.ToString());
-                                    await _channel!.Writer.WriteAsync(new TelnetMessage { Option = inputOption, Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
+                                    _logger.LogDebug("Ending suboption for {OptionName}: {Message}", option.OptionName, sb.ToString());
+                                    await _channel!.Writer.WriteAsync(new TelnetMessage { Option = inputOption, Data = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                     sb.Clear();
                                     subNegotiationOption = 0;
                                     break;
@@ -195,19 +192,19 @@ public class TelnetClient : IAsyncDisposable {
                             }
 
                             if (sb.Length > 0 && subNegotiationOption == 0) {
-                                _logger.LogInformation("Sending message due to start of IAC: {Message}", sb.ToString());
-                                await _channel!.Writer.WriteAsync(new TelnetMessage { Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
+                                _logger.LogDebug("Sending message due to start of IAC: {Message}", sb.ToString());
+                                await _channel!.Writer.WriteAsync(new TelnetMessage { Data = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                 sb.Clear();
                             }
                         } else {
                             if (AppendValue(current, sb) || i == segment.Span.Length - 1) {
                                 if (subNegotiationOption == 0) {
                                     if (i == segment.Span.Length - 1)
-                                        _logger.LogInformation("Sending message due to end of span: {Message}", sb.ToString());
+                                        _logger.LogDebug("Sending message due to end of span: {Message}", sb.ToString());
                                     else
-                                        _logger.LogInformation("Sending message due to new line char: {Message}", sb.ToString());
+                                        _logger.LogDebug("Sending message due to new line char: {Message}", sb.ToString());
 
-                                    await _channel!.Writer.WriteAsync(new TelnetMessage { Message = sb.ToString() }, cancellationToken).ConfigureAwait(false);
+                                    await _channel!.Writer.WriteAsync(new TelnetMessage { Data = sb.ToString() }, cancellationToken).ConfigureAwait(false);
                                     sb.Clear();
                                 }
                             }
@@ -290,7 +287,6 @@ public class TelnetClient : IAsyncDisposable {
                 break;
             case 3: // End of Text or "break" CTRL+C
                 sb.Append("^C");
-                System.Diagnostics.Debug.WriteLine("^C");
                 break;
             case 4: // End of Transmission
                 sb.Append("^D");

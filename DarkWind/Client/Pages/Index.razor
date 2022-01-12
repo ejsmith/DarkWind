@@ -49,12 +49,10 @@
         }
     }
 
-    private async Task SendCommand()
+    private async Task SendCommand(string command)
     {
-        if (String.IsNullOrEmpty(_input)) return;
-
-        await Hub.Send(_input + '\r');
-        await _terminal!.Write(_input + "\r\n");
+        await Hub.Send(command + '\r');
+        await _terminal!.Write(command + "\r\n");
         await _js.InvokeVoidAsync("selectText", "input");
     }
 
@@ -63,6 +61,13 @@
         if (String.IsNullOrEmpty(command)) return;
 
         await Hub.SendGmcp(command);
+    }
+
+    private Task SendCommand()
+    {
+        if (String.IsNullOrEmpty(_input)) return Task.CompletedTask;
+
+        return SendCommand(_input);
     }
 
     private async Task OnFirstRender()
@@ -75,21 +80,21 @@
 
         while (await channel.WaitToReadAsync())
         {
-            while (channel.TryRead(out var data))
+            while (channel.TryRead(out var message))
             {
-                if (data.Option == TelnetMessage.KnownOptions.Echo) 
+                if (message.Option == TelnetMessage.KnownOptions.Echo) 
                 {
-                    await _terminal!.Write(data.Message);    
+                    await _terminal!.Write(message.Data);    
                 }
-                else if (data.Option == TelnetMessage.KnownOptions.GMCP) 
+                else if (message.Option == TelnetMessage.KnownOptions.GMCP) 
                 {
-                    if (String.IsNullOrEmpty(data.Message)) continue;
+                    if (String.IsNullOrEmpty(message.Data)) continue;
 
-                    await _gmcp!.WriteLine(data.Message);
+                    await _gmcp!.WriteLine(message.Data);
 
-                    var firstSpace  = data.Message.IndexOf(' ');
-                    var command        = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
-                    var gmcpData     = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
+                    var firstSpace  = message.Data.IndexOf(' ');
+                    var command        = firstSpace > 0 ? message.Data.Substring(0, firstSpace) : message.Data;
+                    var gmcpData     = firstSpace > 0 && message.Data.Length > firstSpace ? message.Data.Substring(firstSpace) : String.Empty;
 
                     try
                     {

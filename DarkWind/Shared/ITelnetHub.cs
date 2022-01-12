@@ -10,7 +10,7 @@ public interface ITelnetHub {
 
 public class TelnetMessage {
     public byte Option { get; set; } = KnownOptions.Echo;
-    public string? Message { get; set; }
+    public string? Data { get; set; }
 
     public class KnownOptions {
         public const byte Echo = 1;

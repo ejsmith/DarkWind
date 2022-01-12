@@ -34,8 +34,8 @@ namespace DarkWind.Tests {
                 message = await client.Messages.ReadAsync();
                 if (!cts.TryReset())
                     cts = new CancellationTokenSource();
-                _logger.LogInformation(message.Message);
-            } while (message.Message!.Contains("what name") == false);
+                _logger.LogInformation(message.Data);
+            } while (message.Data!.Contains("what name") == false);
 
             await client.WriteLineAsync("SuperZ");
 
@@ -44,15 +44,15 @@ namespace DarkWind.Tests {
                 message = await client.Messages.ReadAsync();
                 if (!cts.TryReset())
                     cts = new CancellationTokenSource();
-                _logger.LogInformation(message.Message);
-            } while (message.Message!.Contains("password") == false);
+                _logger.LogInformation(message.Data);
+            } while (message.Data!.Contains("password") == false);
 
             await client.WriteLineAsync("banana");
 
             cts.CancelAfter(TimeSpan.FromMinutes(1));
             do {
                 message = await client.Messages.ReadAsync(cts.Token);
-                _logger.LogInformation(message.Message);
+                _logger.LogInformation(message.Data);
             } while (true);
         }
     }

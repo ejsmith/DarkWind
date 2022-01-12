@@ -1,7 +1,6 @@
 ﻿using DarkWind.Shared;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
-using System.Text.Json;
 using System.Threading.Channels;
 
 namespace DarkWind.Server.Hubs;
@@ -69,25 +68,13 @@ public class TelnetHub : Hub<ITelnetHub> {
                     IsWanted = true,
                     Initialize = async (client) => {
                         await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Hello {\"Client\":\"DarkWind\",\"Version\":\"1.0.0\"}");
-                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\" ]");
-                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Remove [ \"Char.Items 1\" ]");
+                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\" ]");
                     },
                 });
                 await _client.ConnectAsync("darkwind.org", 3000);
 
                 do {
                     var data = await _client.Messages.ReadAsync();
-                    if (data.Option == TelnetClient.KnownTelnetOptions.GMCP && !String.IsNullOrEmpty(data.Message)) {
-                        var firstSpace = data.Message.IndexOf(' ');
-                        var name = firstSpace > 0 ? data.Message.Substring(0, firstSpace) : data.Message;
-                        var payload = firstSpace > 0 && data.Message.Length > firstSpace ? data.Message.Substring(firstSpace) : String.Empty;
-                        try {
-                            var gmcpData = JsonDocument.Parse(payload);
-                        }
-                        catch (Exception ex) {
-                            _logger.LogError(ex, "Error parsing GMCP: {Message}", data.Message);
-                        }
-                    }
                     await Channel.Writer.WriteAsync(data);
                 }
                 while (true);
