@@ -84,12 +84,12 @@ csharp_style_namespace_declarations=file_scoped:silent
 csharp_style_prefer_range_operator=false:suggestion
 
 # Newline settings
-csharp_new_line_before_open_brace = true:error
-csharp_new_line_before_else = true:error
-csharp_new_line_before_catch = true:error
-csharp_new_line_before_finally = true:error
-csharp_new_line_before_members_in_object_initializers = true:error
-csharp_new_line_before_members_in_anonymous_types = true:error
+csharp_new_line_before_open_brace = false:error
+csharp_new_line_before_else = false:error
+csharp_new_line_before_catch = false:error
+csharp_new_line_before_finally = false:error
+csharp_new_line_before_members_in_object_initializers = false:error
+csharp_new_line_before_members_in_anonymous_types = false:error
 
 # CS1701: Assuming assembly reference matches identity
 dotnet_diagnostic.CS1701.severity = none
