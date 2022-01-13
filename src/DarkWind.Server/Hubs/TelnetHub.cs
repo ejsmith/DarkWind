@@ -68,7 +68,7 @@ public class TelnetHub : Hub<ITelnetHub> {
                     IsWanted = true,
                     Initialize = async (client) => {
                         await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Hello {\"Client\":\"DarkWind\",\"Version\":\"1.0.0\"}");
-                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\" ]");
+                        await client.SendSubCommandAsync(TelnetClient.KnownTelnetOptions.GMCP, "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\", \"Char.Enemy 1\" ]");
                     },
                 });
                 await _client.ConnectAsync("darkwind.org", 3000);

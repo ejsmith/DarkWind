@@ -13,21 +13,30 @@
     OnFirstRender="@OnFirstRender"
 />
 
-<div class="container-fluid p-2">
+<div class="container-fluid">
     <div class="row">
         <div class="col">
-            <div class="p-2 text-center bg-success fw-bold">
-                HP: @health / @maxHealth
-            </div>            
+            <div class="p-2 text-center border-secondary">
+                    HP: @health / @maxHealth
+                <div class="fs-6 text-center text-white bg-success fw-bold" style="width:@healthPercent%">
+                    @healthPercent%
+                </div>            
+            </div>
         </div>
         <div class="col">
-            <div class="p-2 text-center bg-primary fw-bold">
+            <div class="p-2 text-center border-secondary">
                 SP: @spellpoints / @maxSpellpoints
+                <div class="fs-6 text-center text-white bg-primary fw-bold" style="width:@magicPercent%">
+                    @magicPercent%
+                </div>            
             </div>         
         </div>
         <div class="col">
-            <div class="p-2 text-center bg-warning fw-bold">
-                Enemy:
+            <div class="p-2 text-center border-secondary">
+                @enemyName
+                <div class="fs-6 text-center text-white bg-warning fw-bold" style="width:@enemyHealthPercent%">
+                    &nbsp;@enemyHealthDescription
+                </div>            
             </div>            
         </div>            
     </div>    
