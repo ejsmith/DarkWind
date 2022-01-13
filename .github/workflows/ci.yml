@@ -9,11 +9,13 @@ jobs:
           uses: actions/checkout@main
         
         - name: 'Login via Azure CLI'
+          if: false 
           uses: azure/login@v1
           with:
             creds: ${{ secrets.AZURE_CREDENTIALS }}
         
         - name: 'Build and push image'
+          if: false 
           uses: azure/docker-login@v1
           with:
             login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
@@ -22,9 +24,10 @@ jobs:
         
         - run: |
             docker build -f .\src\DarkWind.Server\Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/darkwind:${{ github.sha }}
-            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/darkwind:${{ github.sha }}
+            #docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/darkwind:${{ github.sha }}
 
         - name: 'Deploy to Azure Container Instances'
+          if: false 
           uses: 'azure/aci-deploy@v1'
           with:
             resource-group: ${{ secrets.RESOURCE_GROUP }}
