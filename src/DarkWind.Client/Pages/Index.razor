@@ -4,8 +4,6 @@
 @using DarkWind.Shared
 @using System.Text.Json.Nodes
 @using XtermBlazor
-@inject TelnetHub Hub
-@inject IJSRuntime _js
 
 <PageTitle>DarkWind Web Client</PageTitle>
 
@@ -15,114 +13,35 @@
     OnFirstRender="@OnFirstRender"
 />
 
-<div>HP: @health / @maxHealth</div>
-
-<form @onsubmit="SendCommand" class="m-1">
-    <div class="input-group mb-3 w-100">
+<div class="container-fluid p-2">
+    <div class="row">
+        <div class="col">
+            <div class="p-2 text-center bg-success fw-bold">
+                HP: @health / @maxHealth
+            </div>            
+        </div>
+        <div class="col">
+            <div class="p-2 text-center bg-primary fw-bold">
+                SP: @spellpoints / @maxSpellpoints
+            </div>         
+        </div>
+        <div class="col">
+            <div class="p-2 text-center bg-warning fw-bold">
+                Enemy:
+            </div>            
+        </div>            
+    </div>    
+</div>
+<form @onsubmit="SendCommand">
+    <div class="input-group mb-2 w-100">
         <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2" autocomplete="off" style="box-shadow:none;">
         <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Send</button>
     </div>
 </form>
 
-<Xterm @ref="_gmcp" Options="_gmcpOptions" />
+<div class="container-fluid">
+    <Xterm @ref="_gmcp" Options="_gmcpOptions" />
+</div>
 
-@code {
-    private Xterm? _terminal;
-    private Xterm? _gmcp;
-    private string _input = String.Empty;
-    int health = 0;
-    int maxHealth = 0;
-    private CancellationTokenSource cts = new CancellationTokenSource();
 
-    private Task HandleGmcpMessage(string command, string data) {
-        switch (command)
-        {
-            case "Char.Vitals":
-                var vitals = JsonSerializer.Deserialize<CharVitals>(data);
-                if (vitals == null)
-                    return Task.CompletedTask;
-
-                health      = vitals.Health;
-                maxHealth   = vitals.MaxHealth;
-
-                StateHasChanged();
-
-                break;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private async Task SendCommand(string command)
-    {
-        await Hub.Send(command + '\r');
-        await _terminal!.Write(command + "\r\n");
-        await _js.InvokeVoidAsync("selectText", "input");
-    }
-
-    private async Task SendGmcpCommand(string command)
-    {
-        if (String.IsNullOrEmpty(command)) return;
-
-        await Hub.SendGmcp(command);
-    }
-
-    private Task SendCommand()
-    {
-        if (String.IsNullOrEmpty(_input)) return Task.CompletedTask;
-
-        return SendCommand(_input);
-    }
-
-    private async Task OnFirstRender()
-    {
-        await _js.InvokeVoidAsync("selectText", "input");
-
-        await Hub.Start();
-
-        var channel = await Hub.Connect(cts.Token);
-
-        while (await channel.WaitToReadAsync())
-        {
-            while (channel.TryRead(out var message))
-            {
-                if (message.Option == TelnetMessage.KnownOptions.Echo) 
-                {
-                    await _terminal!.Write(message.Data);    
-                }
-                else if (message.Option == TelnetMessage.KnownOptions.GMCP) 
-                {
-                    if (String.IsNullOrEmpty(message.Data)) continue;
-
-                    await _gmcp!.WriteLine(message.Data);
-
-                    var firstSpace  = message.Data.IndexOf(' ');
-                    var command     = firstSpace > 0 ? message.Data.Substring(0, firstSpace) : message.Data;
-                    var gmcpData    = firstSpace > 0 && message.Data.Length > firstSpace ? message.Data.Substring(firstSpace) : String.Empty;
-
-                    try
-                    {
-                        await HandleGmcpMessage(command, gmcpData);
-                    } 
-                    catch (Exception ex) 
-                    {
-                        await _gmcp!.WriteLine("ERR: " + ex.Message);
-                    }
-                }
-            }
-        }
-    }
-
-    private TerminalOptions _options = new TerminalOptions
-    {
-        Rows = 30,
-        CursorStyle = CursorStyle.Bar
-    };
-
-    private TerminalOptions _gmcpOptions = new TerminalOptions
-    {
-        Rows = 10,
-        CursorStyle = CursorStyle.Bar
-    };
-}
 
