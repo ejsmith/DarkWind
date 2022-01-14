@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using DarkWind.Client.Hubs;
 using DarkWind.Shared;
+using DarkWind.Client.Code.Constants;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using XtermBlazor;
@@ -34,7 +35,7 @@ public partial class Index
     {
         switch (command) 
         {
-            case "Char.Vitals":
+            case GMCPModules.GMCP_CHAR_VITALS:
                 var vitals = JsonSerializer.Deserialize<CharVitals>(data);
                 if (vitals == null) return Task.CompletedTask;
 
@@ -46,11 +47,9 @@ public partial class Index
                 healthPercent = (int)(((float)health / (float)maxHealth) * 100f);
                 magicPercent = (int)(((float)spellpoints / (float)maxSpellpoints) * 100f);
 
-
                 StateHasChanged();
-
                 break;
-            case "Char.Enemy":
+            case GMCPModules.GMCP_CHAR_ENEMY:
                 var enemy = JsonSerializer.Deserialize<CharEnemy>(data);
                 if (enemy == null) return Task.CompletedTask;
 
@@ -61,6 +60,7 @@ public partial class Index
 
                 enemyHealthPercent = (int)(((float)enemyHealth / (float)enemyMaxHealth) * 100f);
 
+                StateHasChanged();
                 break;
         }
         
@@ -111,9 +111,9 @@ public partial class Index
 
                     await _gmcp!.WriteLine(message.Data);
 
-                    var firstSpace = message.Data.IndexOf(' ');
-                    var command = firstSpace > 0 ? message.Data.Substring(0, firstSpace) : message.Data;
-                    var gmcpData = firstSpace > 0 && message.Data.Length > firstSpace ? message.Data.Substring(firstSpace) : String.Empty;
+                    var firstSpace  = message.Data.IndexOf(' ');
+                    var command     = firstSpace > 0 ? message.Data.Substring(0, firstSpace) : message.Data;
+                    var gmcpData    = firstSpace > 0 && message.Data.Length > firstSpace ? message.Data.Substring(firstSpace) : String.Empty;
 
                     try 
                     {
@@ -128,10 +128,15 @@ public partial class Index
         }
     }
 
-    private TerminalOptions _options = new TerminalOptions 
-    {
+
+    private TerminalOptions _options = new TerminalOptions {
         Rows = 30,
-        CursorStyle = CursorStyle.Bar
+        CursorStyle = CursorStyle.Bar,
+        Theme = new Theme 
+        {
+            Black = "#000000",
+            BrightBlack = "#000000"
+        }
     };
 
     private TerminalOptions _gmcpOptions = new TerminalOptions 
