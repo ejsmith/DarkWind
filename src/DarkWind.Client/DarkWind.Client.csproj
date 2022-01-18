@@ -12,16 +12,11 @@
 	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.1" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
+    <PackageReference Include="XtermBlazor" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DarkWind.Shared\DarkWind.Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="XtermBlazor">
-      <HintPath>..\..\..\XtermBlazor\XtermBlazor\bin\Debug\net5.0\XtermBlazor.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
 </Project>

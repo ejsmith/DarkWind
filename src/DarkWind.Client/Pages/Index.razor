@@ -6,11 +6,10 @@
 @using XtermBlazor
 
 <PageTitle>DarkWind Web Client</PageTitle>
-
 <Xterm
     @ref="_terminal"
     Options="_options"
-    OnFirstRender="@OnFirstRender"
+    OnFirstRender="@OnFirstRender"    
 />
 <div class="container-fluid">
     <div class="row">
@@ -50,3 +49,9 @@
 <div class="container-fluid">
     <Xterm @ref="_gmcp" Options="_gmcpOptions" />
 </div>
+<style>
+    .xterm
+    {
+        padding: 2px 10px 2px 10px;
+    }
+</style>
