@@ -6,12 +6,22 @@
 @using XtermBlazor
 
 <PageTitle>DarkWind Web Client</PageTitle>
-<Xterm
-    @ref="_terminal"
-    Options="_options"
-    OnFirstRender="@OnFirstRender"    
-/>
-<div class="container-fluid">
+
+<div class="container-fluid min-vh-100 d-flex flex-column p-0">
+    <div class="row border-bottom">
+        <div class="col bg-black text-white ps-4 pt-2">
+            <h2>DarkWind Web Client</h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <Xterm
+                @ref="_terminal"
+                Options="_options"
+                OnFirstRender="@OnFirstRender"    
+            />
+        </div>
+    </div>
     <div class="row">
         <div class="col">
             <div class="p-2 text-center border-secondary">
@@ -38,17 +48,20 @@
             </div>            
         </div>            
     </div>    
-</div>
-<form @onsubmit="SendCommand">
-    <div class="input-group mb-2 w-100">
-        <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2" autocomplete="off" style="box-shadow:none;">
-        <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Send</button>
+    <div class="row">
+        <form class="d-flex w-100" @onsubmit="SendCommand">
+            <div class="input-group mb-2 w-100">
+            <input id="input" @bind="_input" type="text" class="form-control" placeholder="Send command" aria-label="Send command" aria-describedby="button-addon2" autocomplete="off" style="box-shadow:none;">
+            <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Send</button>
+            </div>
+        </form>
     </div>
-</form>
-
+</div>
+@*
 <div class="container-fluid">
     <Xterm @ref="_gmcp" Options="_gmcpOptions" />
 </div>
+*@
 <style>
     .xterm
     {

@@ -92,6 +92,7 @@ public partial class Index
     private async Task OnFirstRender() 
     {
         await Javascript.InvokeVoidAsync("selectText", "input");
+        await Javascript.InvokeVoidAsync("fitXterm");
 
         await Hub.Start();
 
