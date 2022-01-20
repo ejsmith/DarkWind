@@ -22,6 +22,13 @@ public partial class Index
     int enemyHealthPercent = 100;
     string enemyHealthDescription = "";
 
+    private string[] _addonIds = new string[]
+        {
+        "xterm-addon-fit",
+        "xterm-addon-search",
+        "xterm-addon-web-links",
+        };
+
 
     private Xterm? _terminal;
     private Xterm? _gmcp;
@@ -95,6 +102,8 @@ public partial class Index
         await Javascript.InvokeVoidAsync("fitXterm");
 
         await Hub.Start();
+
+        await _terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
 
         var channel = await Hub.Connect(cts.Token);
 

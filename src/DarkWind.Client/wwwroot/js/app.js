@@ -11,9 +11,5 @@ function selectText(tbId)
 }
 
 function fitXterm() {
-    const fitAddon = new FitAddon.FitAddon();
-
-    XtermBlazor.loadAddon(fitAddon);
-    fitAddon.fit();
 }
 
